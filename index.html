@@ -1,0 +1,160 @@
+<html>
+<hea>
+	<title>Chat with socket.io</title>
+	<style>
+	#chat{
+		height: 500px;
+	}
+	#contentWrap{
+		display: none;
+	}
+
+	#chatWrap{
+		float: left;
+		border: 1px #000 solid;
+	}
+	.whisper{
+		color: gray;
+		font-style: italic;
+	}
+	.error{
+		color: red;
+	}
+	.select{
+		margin: 10px;
+	    padding: 7px;
+	    width: 84px;
+	}
+	</style>
+</hea>
+<body>
+
+<div id="nickWrap">
+		
+		<p id="nickError"></p>
+		<form id="setNick">
+			<p>Enter ID :
+			<input size="35" id="id">
+			</p>
+			<p>Enter Usename : 
+			<input size="35" id="username">
+			</p>
+			<input type="submit">
+		</form>
+</div>	
+
+<div id="contentWrap">
+	<div id="chatWrap">
+		
+		<div id="chat"></div>
+		<select id="users" class="select">
+			<option></option>
+		</select>
+			<form id="send-message">
+				<input  size="35" id="message">
+				<input type="submit" ></input>
+			</form>
+		</div>
+</div>
+
+<div>
+		<select id="offline_user">
+			
+		</select>
+</div>
+<input type="text" id="userid" > </input>
+
+
+
+
+	
+
+	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+
+	<script>
+			jQuery(function($){
+
+				var socket = io.connect();
+				var $nickFrom =$('#setNick');
+				var $nickError = $('#nickError');
+				var $username = $('#username');
+				var $id = $('#id');
+				var $users = $('#users');
+				var $messageFrom = $('#send-message');
+				var $messageBox = $('#message');
+				var $chat = $('#chat');
+				var $userid = $('#userid').val();
+
+
+				$nickFrom.submit(function(e){
+					e.preventDefault();
+					var $datas = {'id':$id.val(),'username':$username.val()};
+					socket.emit('new user',$datas,function(data){
+						if(data){
+							$('#nickWrap').hide();
+							$('#contentWrap').show();
+							$userid = data
+							$('#userid').val(data)
+						}else{
+							$nickError.html('That username is already taken try again');
+						}
+					});
+					$myname = $username.val();
+					$username.val('');
+				});
+
+				socket.on('username',function(data){
+					
+					var html = '';
+					$.each(data ,function(key , value){
+						if(value.username != $username.val()){
+							html += "<option value="+ value._id+">"+value.username + '</option>'
+						}
+					});				
+					$users.html(html);
+				});
+
+
+				socket.on('offline_users' , function(data){
+					var html = '';
+					 for(var i=1; i < data.length; i++){
+                      		html += "<option value="+ data[i]._id+">"+data[i].username+ '</option>'
+            		}
+            		$('#offline_user').html(html);
+				});
+
+				$messageFrom.submit(function(e)
+				{
+						e.preventDefault();
+						var $dataUser = { 'userid': $userid , 'selected_user':$('#users option:selected').val(),'message':$messageBox.val()}
+						socket.emit('send message',$dataUser,function(data){
+							$chat.append('<span class="error"><b>'+ data+'</span></br>')
+						});
+						isplayMsg( {msg: messageBox.val() , nick:'Me'} );	
+						$messageBox.val('');
+				});
+
+				
+
+				socket.on('load_msg',function(docs){
+					for(var i=0;i<docs.length;i++){
+						displayMsg(docs[i])
+					}
+				});
+		
+				socket.on('new message',function(data){
+					displayMsg(data);
+				});
+				socket.on('Whisper',function(data){
+ 					$chat.append('<span class="Whisper"><b>'+ data.nick + ': </b>'+ data.msg+'</span></br>')
+				});
+
+				function displayMsg(data){
+				 $chat.append('<span class="msg"><b>'+ data.nick + ': </b>'+ data.msg+'</span></br>');
+				}
+			});
+
+	</script>
+</body>
+</html>
